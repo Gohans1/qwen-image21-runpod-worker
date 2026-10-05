@@ -1,0 +1,1 @@
+ghcr.io/gohans1/qwen-image21-runpod-worker@sha256:8932f2c0a1c309a3132ac8ca7dbd15b06325b1587de5a887848ddf00c8fae542

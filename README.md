@@ -4,7 +4,17 @@ Serverless queue worker using Runpod's official ComfyUI handler, a pinned ComfyU
 
 ## Status
 
-The deployment configuration, local checks, and manual GitHub Actions build workflow are prepared. The image has not been built or published, and no GitHub repository, Runpod endpoint, or paid inference job has been created. Container startup and GPU inference are not yet verified. Publishing source, triggering a build, creating an endpoint, and running GPU verification remain behind the user's final approval.
+The worker source and `linux/amd64` image have been published through a successful manual GitHub Actions build:
+
+- Source: https://github.com/Gohans1/qwen-image21-runpod-worker
+- Build: https://github.com/Gohans1/qwen-image21-runpod-worker/actions/runs/37368406033
+- Built source commit: `05bc9e23f103b7cf1e6b0f5d0f6fdd6e9ba12433`
+- Immutable image reference: `image-reference.txt`
+- Verified in CI: 9 local behavior checks passed; the ComfyUI v0.38.0 CPU import smoke check passed, including ComfyUI-GGUF.
+
+Package visibility has not been changed from GHCR's initial private default. The local GitHub CLI lacks `read:packages`, so package metadata and a private registry pull have not been independently verified. Configure Runpod pull credentials or explicitly approve changing image visibility before deployment.
+
+No Runpod endpoint or paid inference job has been created. Real cache mounting, worker startup, GPU memory use, inference, and FlashBoot revival remain unverified. The CPU build log includes a CUDA-optimization warning for the inherited PyTorch 2.11.0+cu128; CPU import success is not a GPU compatibility/performance guarantee. Runpod deployment and GPU verification still require the user's final command.
 
 ## Model cache
 
