@@ -14,7 +14,15 @@ The worker source and `linux/amd64` image have been published through a successf
 
 The image is public: anonymous GHCR manifest access and the `linux/amd64` digest were verified, and the live Runpod worker successfully pulled that digest without registry credentials.
 
-An authorized serverless endpoint has been created using the existing template, and exactly one verification job has been submitted under a $1 operational budget. The platform is preparing the model cache; GPU inference has not yet succeeded. Real cache mounting, worker startup, GPU memory use, inference, and FlashBoot revival remain unverified. The CPU build log includes a CUDA-optimization warning for the inherited PyTorch 2.11.0+cu128; CPU import success is not a GPU compatibility/performance guarantee. The user approved retaining the existing port declarations for this trial. An attempted official API port patch returned Cloudflare `403` / error `1010`; this is not evidence of insufficient API-key permissions. The strict no-port `deploy.py --apply` path remains unverified against the live API.
+One authorized GPU verification completed successfully on an RTX 4090 with PyTorch 2.11.0+cu128 and ComfyUI v0.38.0. The real mounted cache, all three selected models, GGUF loading, and the complete image workflow worked.
+
+- Result: one decodable 1024 × 1024 RGBA PNG, 2,303,630 bytes; local artifact `test-output/qwen-image21.png` is gitignored.
+- Initial queue/setup wait: 821.539 seconds; job execution: 30.759 seconds; ComfyUI reported 26.57 seconds for the prompt itself. This is one measurement, not a warm-start or two-hour inactivity guarantee.
+- Observed account balance reduction: approximately $0.0143, below the approved $1 budget. Detailed endpoint billing records were still empty when checked; this balance change is not a guaranteed per-image price.
+- The endpoint and its port declarations were retained. Workers were explicitly paused at `workersMin=workersMax=0` after verification; health showed zero workers, no queued/running jobs, one completed job, and no failures/retries. Reported current spend was $0/hour.
+- ComfyUI runtime logs confirmed the service binds to `127.0.0.1:8188`. FlashBoot revival and performance after extended inactivity remain untested.
+
+The user approved retaining the existing `22/tcp` and `8888/http` declarations for this trial. An attempted official API port patch returned Cloudflare `403` / error `1010`; this is not evidence of insufficient API-key permissions. The trial used `runpodctl` with the existing template rather than the strict no-port `deploy.py --apply` path, which remains unverified against the live API.
 
 ## Model cache
 
@@ -96,7 +104,17 @@ Configuration:
 runpodctl serverless run ENDPOINT_ID --input-file workflow.json --wait 15m > result.json
 ```
 
-Confirm a completed job, a decodable non-empty image in `output.images[].data`, no model/node errors, and worker scale-down. A client wait timeout does not cancel a job. The current trial has an independent local 30-minute worker-stop timer (`workersMin=workersMax=0`), not a provider-enforced dollar cap; do not automatically resubmit failed jobs or remove the timer before verifying scale-down. Download results promptly; Runpod retains asynchronous results for only a limited time.
+Confirm a completed job, a decodable non-empty image in `output.images[].data`, no model/node errors, and worker scale-down. A client wait timeout does not cancel a job. The trial used an independent local 30-minute worker-stop timer, not a provider-enforced dollar cap. It was cancelled only after the successful result, explicit `workersMin=workersMax=0`, and verified zero workers. Do not automatically resubmit failed jobs. Download results promptly; Runpod retains asynchronous results for only a limited time.
+
+### Resume the retained endpoint (requires a new approved run)
+
+The retained endpoint is paused, not deleted. Re-enable at most one worker only when another paid request is approved, then stop workers after that request:
+
+```sh
+runpodctl serverless update ENDPOINT_ID --workers-min 0 --workers-max 1
+# Submit an approved request, collect the result, then pause:
+runpodctl serverless update ENDPOINT_ID --workers-min 0 --workers-max 0
+```
 
 ## License
 
