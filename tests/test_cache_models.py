@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from cache_models import link_models
+from cache_models import find_snapshot, link_models
 
 
 FILES = {
@@ -62,6 +62,61 @@ class CacheModelsTests(unittest.TestCase):
             link_models(self.snapshot, self.models)
         self.assertEqual(target.read_bytes(), b"do not overwrite")
         self.assertFalse((self.models / "diffusion_models").exists())
+
+    def test_auto_discovery_finds_snapshot_containing_required_models(self):
+        hub = self.root / "auto_hub"
+        snap = hub / "models--Gohans--qwen-image21-selected" / "snapshots" / "511a4f966b"
+        for index, filename in enumerate(FILES):
+            blob = hub / "blobs" / f"auto-{index}"
+            blob.parent.mkdir(parents=True, exist_ok=True)
+            blob.write_bytes(f"auto-model-{index}".encode())
+            src = snap / filename
+            src.parent.mkdir(parents=True, exist_ok=True)
+            src.symlink_to(blob)
+
+        discovered = find_snapshot(hub)
+        self.assertEqual(discovered, snap)
+
+    def test_auto_discovery_ignores_unrelated_model_repos(self):
+        hub = self.root / "mixed_hub"
+        unrelated = hub / "models--other--bert" / "snapshots" / "rev1"
+        unrelated.mkdir(parents=True, exist_ok=True)
+        (unrelated / "config.json").write_text("{}")
+
+        target_snap = hub / "models--custom--qwen" / "snapshots" / "rev2"
+        for index, filename in enumerate(FILES):
+            blob = hub / "blobs" / f"blob-{index}"
+            blob.parent.mkdir(parents=True, exist_ok=True)
+            blob.write_bytes(b"data")
+            src = target_snap / filename
+            src.parent.mkdir(parents=True, exist_ok=True)
+            src.symlink_to(blob)
+
+        discovered = find_snapshot(hub)
+        self.assertEqual(discovered, target_snap)
+
+    def test_auto_discovery_raises_if_no_matching_snapshot_found(self):
+        hub = self.root / "empty_hub"
+        hub.mkdir(parents=True, exist_ok=True)
+        with self.assertRaisesRegex(FileNotFoundError, "No valid model snapshot found"):
+            find_snapshot(hub)
+
+    def test_link_models_defaults_to_auto_discovery(self):
+        hub = self.root / "default_hub"
+        snap = hub / "models--Gohans--qwen-image21-selected" / "snapshots" / "rev1"
+        for index, filename in enumerate(FILES):
+            blob = hub / "blobs" / f"d-{index}"
+            blob.parent.mkdir(parents=True, exist_ok=True)
+            blob.write_bytes(f"default-{index}".encode())
+            src = snap / filename
+            src.parent.mkdir(parents=True, exist_ok=True)
+            src.symlink_to(blob)
+
+        models = self.root / "comfyui_auto" / "models"
+        link_models(snapshot=None, models=models, hub_dir=hub)
+        for source_name, target_name in FILES.items():
+            self.assertTrue((models / target_name).is_symlink())
+            self.assertEqual((models / target_name).resolve(), (snap / source_name).resolve())
 
 
 if __name__ == "__main__":

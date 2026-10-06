@@ -100,7 +100,7 @@ class DeployTests(unittest.TestCase):
             "--gpu-count": "1", "--idle-timeout": "1", "--execution-timeout": "600",
             "--gpu-id": "NVIDIA GeForce RTX 4090", "--scale-by": "delay",
             "--min-cuda-version": "12.8",
-            "--model-reference": "https://huggingface.co/abenzerps/Qwen-Image-2.1-Uncensored-GGUF:6b34e59458d3eb7ba6a6f86a116aed5253dc02c3",
+            "--model-reference": "https://huggingface.co/Gohans/qwen-image21-selected:511a4f966b5e6684d383e0287cd9685c5f3d897c",
         }
         for flag, value in required.items():
             with self.subTest(flag=flag):
