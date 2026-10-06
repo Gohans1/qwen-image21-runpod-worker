@@ -1,6 +1,6 @@
 # Qwen-Image-2.1 GGUF on Runpod Serverless
 
-Serverless queue worker using Runpod's official ComfyUI handler, a pinned ComfyUI v0.38.0, and the leejet GGUF loader. No Pods, Network Volumes, SSH ports, or public ComfyUI interface.
+Serverless queue worker using Runpod's official ComfyUI handler, a pinned ComfyUI v0.38.0, and the leejet GGUF loader. No Pods or Network Volumes. The current authorized trial retains the template's default `22/tcp` and `8888/http` declarations; it does not intentionally enable SSH or a public ComfyUI interface.
 
 ## Status
 
@@ -12,9 +12,9 @@ The worker source and `linux/amd64` image have been published through a successf
 - Immutable image reference: `image-reference.txt`
 - Verified in CI: 9 local behavior checks passed; the ComfyUI v0.38.0 CPU import smoke check passed, including ComfyUI-GGUF.
 
-Package visibility has not been changed from GHCR's initial private default. The local GitHub CLI lacks `read:packages`, so package metadata and a private registry pull have not been independently verified. Configure Runpod pull credentials or explicitly approve changing image visibility before deployment.
+The image is public: anonymous GHCR manifest access and the `linux/amd64` digest were verified, and the live Runpod worker successfully pulled that digest without registry credentials.
 
-No Runpod endpoint or paid inference job has been created. Real cache mounting, worker startup, GPU memory use, inference, and FlashBoot revival remain unverified. The CPU build log includes a CUDA-optimization warning for the inherited PyTorch 2.11.0+cu128; CPU import success is not a GPU compatibility/performance guarantee. Runpod deployment and GPU verification still require the user's final command.
+An authorized serverless endpoint has been created using the existing template, and exactly one verification job has been submitted under a $1 operational budget. The platform is preparing the model cache; GPU inference has not yet succeeded. Real cache mounting, worker startup, GPU memory use, inference, and FlashBoot revival remain unverified. The CPU build log includes a CUDA-optimization warning for the inherited PyTorch 2.11.0+cu128; CPU import success is not a GPU compatibility/performance guarantee. The user approved retaining the existing port declarations for this trial. An attempted official API port patch returned Cloudflare `403` / error `1010`; this is not evidence of insufficient API-key permissions. The strict no-port `deploy.py --apply` path remains unverified against the live API.
 
 ## Model cache
 
@@ -34,7 +34,7 @@ Runpod currently caches all quantizations in a repository, so the initial cache 
 uv run --no-project python -m unittest discover -s tests -v
 ```
 
-The checks exercise real temporary cache files/symlinks and the deployment process with a fake CLI boundary. They do not prove container or GPU compatibility.
+The current 17 checks exercise real temporary cache files/symlinks and the deployment process with fake external CLI/localhost API boundaries. Port-removal regression checks failed before the fix and passed afterward. They do not prove container or GPU compatibility.
 
 ## Build and publish
 
@@ -83,6 +83,8 @@ Configuration:
 | Container disk | 30 GB |
 | Volume disk / Network Volume | 0 GB / none |
 
+`--apply` requires Python 3.11+ and the existing `RUNPOD_API_KEY` or `~/.runpod/config.toml` credential. It uses the official API to explicitly set template `ports: []` and verifies the returned template before creating an endpoint; the CLI omits empty ports. The preview displays that PATCH without exposing credentials or making API calls. A refused/failed patch prevents endpoint creation.
+
 `--apply` creates a serverless template and idle endpoint only: it does not submit a job or wait for a GPU worker. A worker limit is not a monetary budget. If endpoint creation fails after template creation, its ID is printed to stderr; inspect `runpodctl template list` / `runpodctl serverless list` before retrying to avoid duplicate resources.
 
 ## Paid verification (requires separate approval)
@@ -94,7 +96,7 @@ Configuration:
 runpodctl serverless run ENDPOINT_ID --input-file workflow.json --wait 15m > result.json
 ```
 
-Confirm a completed job, a decodable non-empty image in `output.images[].data`, no model/node errors, and worker scale-down. A client wait timeout does not cancel a job. Download results promptly; Runpod retains asynchronous results for only a limited time.
+Confirm a completed job, a decodable non-empty image in `output.images[].data`, no model/node errors, and worker scale-down. A client wait timeout does not cancel a job. The current trial has an independent local 30-minute worker-stop timer (`workersMin=workersMax=0`), not a provider-enforced dollar cap; do not automatically resubmit failed jobs or remove the timer before verifying scale-down. Download results promptly; Runpod retains asynchronous results for only a limited time.
 
 ## License
 
